@@ -120,5 +120,5 @@ int evalMode(int mode, int n, int k)
 void showAnswer(int n, int k, int answer)
 {
 	banner();
-	printf("There are %d ways from %d taken %d\n.", answer, n, k);
+	printf("\nThere are %d ways from %d taken %d\n.", answer, n, k);
 }// end of showAnswer
