@@ -8,7 +8,7 @@ void transpose(char **, char ***, int, int, int);
 // Main
 int main(){
 	char * plainText;	// Array
-	char ** cipherText;	// 2D Array
+	char ** cipherText;	// 2D Arrayz
 	int key, row, length;
 
 	plainText = (char *) malloc(sizeof(char *)*100); // Allocate for 100 characters
@@ -69,4 +69,25 @@ void transpose(char ** plainPtr, char *** cipherPtr, int key, int length, int ro
 		}
 	}
 	printf("\n");
+
+	// 2D array Illustration
+	printf("Illustration:\n");
+	for(int i=1; i<key+1; ++i){
+		if(i<key){
+			printf(" %d |", i);
+		} else {
+			printf(" %d", i);
+		}
+	}
+	printf("\n");
+	for(int i=0; i<row; ++i){
+		for(int j=0; j<key; ++j){
+			if(j<key-1){
+				printf(" %c |", (*cipherPtr)[i][j]);
+			} else {
+				printf(" %c", (*cipherPtr)[i][j]);
+			}
+		}
+		printf("\n");
+	}
 }
