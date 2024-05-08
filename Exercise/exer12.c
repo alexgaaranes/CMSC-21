@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 // Structure for the name of the Student
 struct stud_name{
@@ -23,14 +24,25 @@ typedef Node* Nodeptr;
 
 // Function Declarations
 void menu(int *opt);
+char * strLower(char *str);
+
 void addStud(Nodeptr *hptr, int *entriesPtr);
 void showRec(Nodeptr start);
+void addAbs(Nodeptr temp, int entries);
+void delStud(Nodeptr *hptr,  int *entries);
+
+void saveData(FILE * src, Nodeptr temp, int entries);
+void loadData(FILE * src, Nodeptr *hptr, int *entries);
 
 // MAIN
 int main(){
 	// Declare the head
 	Nodeptr head = NULL;
 	int choice, entries = 0;
+	FILE *source;
+
+	// LOAD AT INITIAL STATE
+	loadData(source, &head, &entries);
 
 	// MAIN LOOP
 	do{
@@ -38,20 +50,23 @@ int main(){
 		menu(&choice);
 		switch(choice){
 			case 1:
-				addStud(&head, &entries);
+				addStud(&head, &entries);	// Add a record
 				break;
 			case 2:
-				showRec(head);
+				showRec(head);				// Show records
 				break;
 			case 3:
+				addAbs(head, entries);		// Add absent
 				break;
 			case 4:
+				delStud(&head, &entries);	// Delete a record
 				break;
 			case 0:
-				printf("Bye...\n");
+				saveData(source, head, entries);
+				printf("Bye...\n");			// Exit
 				break;
 			default:
-				printf("Invalid Input\n\n");
+				printf("Invalid Input\n\n");// Invalid Input
 		}
 	}while (choice != 0);
 
@@ -72,13 +87,95 @@ void menu(int *opt){
 	scanf("%i", opt);
 }
 
+char * strLower(char *str){
+	char * temp = str;
+	while(*temp!='\0'){
+		*temp = tolower(*temp);
+		*temp++;
+	}
+	
+	return str;
+}
+
+void saveData(FILE * src, Nodeptr temp, int entries){
+	// Check for file
+	if ((src = fopen("data.txt", "w")) == NULL){
+		printf("Unable to open file: File does not exist\n");
+		return;
+	}
+
+	// If no entries yet
+	if (entries == 0){
+		printf("No records to save\n");
+		fputc('0', src);
+		fclose(src);
+		return;
+	}
+
+	// Save data
+	fprintf(src, "%i\n", entries);
+	for (int i=0; i<entries; i++){
+		fprintf(src, "%s %s\n", temp->name.firstname, temp->name.lastname);
+		fprintf(src, "%s\n", temp->studnum);
+		fprintf(src, "%i\n", temp->absences);
+		temp = temp->next;
+	}
+	fclose(src);
+	printf("Saving Successful\n");
+	return;
+}
+
+void loadData(FILE * src, Nodeptr *hptr, int *entries){
+	// Check for file
+	if ((src = fopen("data.txt", "r")) == NULL){
+		printf("Unable to open file: File does not exist\n");
+		return;
+	}
+
+	// Load num of entries
+	fscanf(src, "%i", entries);
+
+	// If no entries yet
+	if (*entries == 0){
+		printf("No records to load\n");
+		fclose(src);
+		return;
+	}
+
+	// Load data and allocate memory for each entry
+	Nodeptr temp = NULL, new = NULL;
+	for (int i=0; i<(*entries); i++){
+		new = (Nodeptr) malloc(sizeof(Node));	// Allocate for new node
+
+		// Get the data
+		fscanf(src, "%s %s\n", new->name.firstname, new->name.lastname);
+		fscanf(src, "%s\n", new->studnum);
+		fscanf(src, "%i\n", &new->absences);
+
+		if (i==0){
+			(*hptr) = new;
+			temp = (*hptr);
+		} else {
+			temp->next = new;
+			temp = temp->next;
+		}
+
+		new = NULL;
+	}
+
+	fclose(src);
+	printf("Loading Successful\n");
+	return;
+}
+
 void addStud(Nodeptr *hptr, int *entriesPtr){
 	// Check if there is still space to add a new record
 	if (*entriesPtr == 10){
 		printf("Cannot Add Record: System Full\n");
 		return;
 	}
-
+	
+	printf("\n-- Adding a Record --\n");
 	// New node and pointers
 	Nodeptr new, temp, trail = NULL;
 	new = (Nodeptr) malloc(sizeof(Node));
@@ -111,9 +208,13 @@ void addStud(Nodeptr *hptr, int *entriesPtr){
 		// Iterate through the list
 		while(temp!=NULL){
 			// Compare Last Name (negative == should come earlier)
-			if (strcmp(new->name.lastname,temp->name.lastname)<=0){
+			char newLastName[20], tempLastName[20];
+			strcpy(newLastName,new->name.lastname);
+			strcpy(tempLastName,temp->name.lastname);
+
+			if (strcmp(strLower(newLastName),strLower(tempLastName))<=0){
 				// Check if to be inserted at the front
-				if (trail == NULL && *entriesPtr == 1){
+				if (trail == NULL){
 					new->next = (*hptr);
 					(*hptr) = new;
 				} else {
@@ -128,10 +229,11 @@ void addStud(Nodeptr *hptr, int *entriesPtr){
 			temp = temp->next;	// Move to the next node
 		}
 		// If exhausted the whole linked list (Adding to tail)
-		temp->next = new;
-		(*entriesPtr) += 1;
-		return;
+		trail->next = new;
 	}
+
+	(*entriesPtr) += 1;
+	return;
 }
 
 void showRec(Nodeptr temp){
@@ -154,117 +256,73 @@ void showRec(Nodeptr temp){
 	return;
 }
 
-
-
-// typedef struct stud_name{
-// 	// Members that will compose the name
-// 	char firstname[20], lastname[20];
-// } Stud_name;
-
-// typedef struct stud_node{
-// 	// Student record data
-// 	Stud_name name;
-// 	char stud_num[10];
-// 	int absences;
+void addAbs(Nodeptr temp, int entries){
+	// Check if there entries to update absences
+	if (entries == 0){
+		printf("Cannot add: System is empty\n");
+		return;
+	}
 	
-// 	// Self referencing pointer;
-// 	struct stud_node* next_stud;
-// } Student;
-
-// // Typedef the Stud_Node pointer
-// typedef Student* Stud_ptr;
-
-// // Function Protoytpes
-// void showMenu();
-// int add(Stud_ptr* start_ptr, int* size);
-// int showRecord(Stud_ptr Start);
-
-// // MAIN
-// int main(){
-// 	Stud_ptr start = NULL;
-// 	int size = 0, choice;
-		
-// 	// Main Program loop
-// 	do {
-// 		printf("[1] Add Student Record\n");
-// 		printf("[2] Print All Student Records\n");
-// 		printf("[3] Add Absence\n");
-// 		printf("[4] Delete Student\n");
-// 		printf("[0] Exit\n");
-// 		scanf("%i", &choice);
-		
-// 		switch(choice){
-// 			case 1:
-// 				add(&start, &size);
-// 				break;
-// 			case 2:
-// 				showRecord(start);
-// 				break;
-// 			case 3:
-// 				break;
-// 			case 4:
-// 				break;
-// 			case 0:
-// 				printf("Bye!...\n");
-// 				break;
-// 			default:
-// 				printf("Invalid Input\n");
+	printf("\n-- Adding Absent--\n");
 	
-// 		}
-// 	} while(choice != 0);
-// 	return 0;
-// }
+	// Request for the student number to edit
+	char reqnum[20];
 
-// // Function Implementation
-// int add(Stud_ptr* start_ptr, int* size){
-// 	if ((*size) == 10){
-// 		printf("Cannot add: System Full (Max: 10)\n");
-// 		return 0;
-// 	}
-// 	// Create a temp student pointer
-// 	Stud_ptr temp;
-// 	// Create a new Student Node
-// 	temp = (Stud_ptr) malloc(sizeof(Student));
-	
-// 	// Get student data
-// 	printf("Enter first name: ");
-// 	scanf("%s", temp->name.firstname);
-// 	printf("Enter last name: ");
-// 	scanf("%s", temp->name.lastname);
-// 	printf("Enter student number: ");
-// 	scanf("%s", temp->stud_num);
-// 	printf("Enter number of absences: ");
-// 	scanf("%i", &(temp->absences));
+	printf("Enter the student number: ");
+	scanf("%s", reqnum);
 
-// 	// Point to the current first element
-// 	temp->next_stud = (*start_ptr);	
-// 	*start_ptr = temp; // Become the first element
-	
-// 	*size += 1;
-// 	return 1;
-// }
+	while(temp!=NULL){
+		// Check for matching student number
+		if(strcmp(reqnum,temp->studnum) == 0){
+			temp->absences += 1;
+			printf("Added an absent to %s's record.\n", temp->name.lastname);
+			return;
+		}
+		temp = temp->next;
+	}
+	// Exhausted the linked list
+	printf("No matched student number.\n");
+	return;
+}
 
-// int showRecord(Stud_ptr start){
-// 	Stud_ptr temp;
-	
-// 	// Start form first element
-// 	temp = start;
-	
-// 	// If no record
-// 	if(temp == NULL){
-// 		printf("No record to show\n");
-// 		return 0;
-// 	}
-// 	while(temp!=NULL){
-// 		printf("Name: %s %s\n", temp->name.firstname, temp->name.lastname);
-// 		printf("Student Number: %s\n", temp->stud_num);
-// 		printf("Absences: %i\n", temp->absences);
-// 		// Move to the next record
-// 		temp = temp->next_stud;
-// 	}
 
-// 	return 1;
-// }	
+void delStud(Nodeptr *hptr, int *entries){
+	if (*entries == 0){
+		printf("Cannot Delete: System is empty\n");
+		return;
+	}
+	
+	printf("\n-- Deleting a Record --\n");
+	// Request for the student number that corresponds to the record to be deleted
+	char reqnum[20];
+	
+	printf("Enter the student number: ");
+	scanf("%s", reqnum);
+	
+	Nodeptr temp = (*hptr), trail = NULL;	// Make a pointer that points at the start and a trailing pointer
+	while(temp!=NULL){
+		// Check for matched student number
+		if (strcmp(reqnum, temp->studnum) == 0){
+			// Check if deleting first record
+			if (trail == NULL){
+				(*hptr) = (*hptr)->next;	// Move the head to the next record
+				free(temp); // Delete the first record
+			} else {
+				trail->next = temp->next; // Make the trailing pointer's record skip the record being pointed at by temp
+				free(temp); // Delete the record
+			}
+			(*entries) -= 1;
+			return;
+		}
+		// Move the trailing pointer and the temp
+		trail = temp;
+		temp = temp->next;
+	}
+	// If the linked list is exhausted
+	printf("No matched student number.\n");
+	return;
+}
+
 
 
 
