@@ -31,17 +31,18 @@ int main(){
 				break;
 			case 0:
 				saveData(source, head, entries);
-				printf("Bye...\n");			// Exit
+				printf("\n...Program Closed...\n");			// Exit
 				break;
 			default:
 				printf("Invalid Input\n\n");// Invalid Input
 		}
 
 	}while (choice != 0);
-
+	
+	// dealloc
+	dealloc(&head);
 	return 0;
 }
-
 
 
 

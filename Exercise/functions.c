@@ -5,13 +5,13 @@
 
 // Structure for the name of the Student
 struct stud_name{
-	char firstname[30], lastname[30];
+	char firstname[20], lastname[20];
 };
 
 // Structure for the Student Record
 typedef struct stud_record{
 	struct stud_name name;
-	char studnum[30];
+	char studnum[20];
 	int absences;
 
 	// Self referencing pointer
@@ -32,19 +32,27 @@ void menu(int *opt){
 	printf("[3] Add Absence\n");
 	printf("[4] Delete Record\n");
 	printf("[0] Exit\n");
+	printf("---------------------\nEnter: ");	
 
 	scanf("%i", opt);
 }
 
 char * strLower(char *str){
-	char * temp = str;
 	// Lower case all letters in the string
-	while(*temp!='\0'){
-		*temp = tolower(*temp);
-		*temp++;
+	for(int i=0; i<strlen(str); i++){
+		str[i] = tolower(str[i]);
 	}
 	
 	return str;
+}
+
+void dealloc(Nodeptr *hptr){
+	Nodeptr temp = NULL;	// This will free the nodes
+	while((*hptr)!=NULL){
+		temp = *hptr;		// Follow the head
+		*hptr = (*hptr)->next;	// Move the head to the next
+		free(temp);		// Free node
+	}
 }
 
 int validStudnum(char *id){
@@ -105,14 +113,14 @@ void saveData(FILE * src, Nodeptr temp, int entries){
 		temp = temp->next;
 	}
 	fclose(src);
-	printf("Saving Successful\n");
+	printf("\nSaving Successful\n");
 	return;
 }
 
 void loadData(FILE * src, Nodeptr *hptr, int *entries){
 	// Check for file
 	if ((src = fopen("data.txt", "r")) == NULL){
-		printf("Unable to open file: File does not exist\n");
+		printf("\nCannot Load: No save file\n");
 		return;
 	}
 
@@ -148,7 +156,7 @@ void loadData(FILE * src, Nodeptr *hptr, int *entries){
 	}
 
 	fclose(src);
-	printf("Loading Successful\n");
+	printf("\nLoading Successful\n");
 	return;
 }
 
@@ -182,7 +190,7 @@ void addStud(Nodeptr *hptr, int *entriesPtr){
 	scanf("%i", &new->absences);
 
 	// Check number of absences
-	if (new->absences < 0){printf("Invalid Numeber of Absences\n"); return;}
+	if (new->absences < 0){printf("Invalid Number of Absences\n"); return;}
 
 	// Initialize to NULL
 	new->next = NULL;
@@ -194,37 +202,46 @@ void addStud(Nodeptr *hptr, int *entriesPtr){
 	if (temp==NULL){
 		// Make the new node the first element
 		(*hptr) = new;
-
 	} else {
-		// Iterate through the list
-		while(temp!=NULL){
-			// Compare Last Name (negative == should come earlier)
-			char newLastName[20], tempLastName[20];
-			strcpy(newLastName,new->name.lastname);
-			strcpy(tempLastName,temp->name.lastname);
-
-			if (strcmp(strLower(newLastName),strLower(tempLastName))<=0){
-				// Check where to insert new node
-				if (trail == NULL){	// FRONT
-					new->next = (*hptr);
-					(*hptr) = new;
-				} else {			// MIDDLE
-					new->next = temp;
-					trail->next = new;
-				}
-				(*entriesPtr) += 1;
-				printf("New Record Added!\n");
-				return;
+		// Compare Last Names
+		char newLastName[20], tempLastName[20];
+			
+		/*	Create a copy of the string
+			to avoid modification of the
+			original string */
+		strcpy(newLastName,new->name.lastname);
+		strcpy(tempLastName, temp->name.lastname);
+		
+		// Check on the first entry
+		if(strcmp(strLower(newLastName),strLower(tempLastName)) <= 0){
+			new->next = *hptr;
+			*hptr = new;
+		} else {
+			if(temp->next == NULL){	// If one element only
+				temp->next = new;
+			} else {
+				// get the last name of the next entry
+				strcpy(tempLastName, temp->next->name.lastname);
 				
+				// Iterate through the rest of the linked list
+				// Stop when position is found
+				while(temp->next != NULL && strcmp(strLower(newLastName), strLower(tempLastName)) > 0){
+					// get the last name of the next entry
+					//strcpy(tempLastName, temp->next->name.lastname);
+					temp = temp->next;
+					// get the last name of the next entry
+					if (temp->next != NULL){
+						strcpy(tempLastName, temp->next->name.lastname);
+					}
+				}
+				
+				// Insert (works in both middle and tail)
+				new->next = temp->next;
+				temp->next = new;
 			}
-			trail = temp;	// point to the node before
-			temp = temp->next;	// Move to the next node
 		}
-		// exhausted the whole linked list, append
-		trail->next = new;			// TAIL
 	}
-
-	(*entriesPtr) += 1;
+	(*entriesPtr) += 1;	// update num of entries
 	printf("New Record Added!\n");
 	return;
 }
@@ -237,11 +254,14 @@ void showRec(Nodeptr temp){
 	}
 
 	// Iterate through all entries
-	printf("\n-- Records --\n\n");
+	printf("\n\n-------------------------------------Records------------------------------------\n\n");
+	printf("Name\t\t\t\t\t\tStudent No.\tAbsences\n");
+	printf("First Name\t     Last Name\n");
+	printf("--------------------------------------------------------------------------------\n");
 	while(temp != NULL){
-		printf("Name: %s %s\n", temp->name.firstname, temp->name.lastname);
-		printf("Student Number: %s\n", temp->studnum);
-		printf("Absences: %i\n\n", temp->absences);
+		printf("%-20s %-20s\t", temp->name.firstname, temp->name.lastname);
+		printf("%-10s\t", temp->studnum);
+		printf("%-3i\n", temp->absences);
 
 		// Move to the next student node
 		temp = temp->next;
@@ -299,27 +319,28 @@ void delStud(Nodeptr *hptr, int *entries){
 	// Check student number if available and valid
 	if (!validStudnum(reqnum)){return;}
 	
-	Nodeptr temp = (*hptr), trail = NULL;	// Make a pointer that points at the start and a trailing pointer
-	while(temp!=NULL){
-		// Check for matched student number
-		if (strcmp(reqnum, temp->studnum) == 0){
-			// Check if deleting first record
-			if (trail == NULL){
-				(*hptr) = (*hptr)->next;	// Move the head to the next record
-				free(temp); // Delete the first record
-			} else {
-				trail->next = temp->next; // Make the trailing pointer's record skip the record being pointed at by temp
-				free(temp); // Delete the record
-			}
-			(*entries) -= 1;
-			printf("Record Deleted!\n");
+	Nodeptr temp = (*hptr), delptr = NULL;	// Make a pointer that points at the start and a trailing pointer
+	
+	// Check the first element
+	if(strcmp(reqnum, temp->studnum) == 0){
+		(*hptr) = (*hptr)->next;	// Move the head to the next record
+		free(temp);			// Delete the first element
+	} else {	// Check for the record after the pointed record
+		// loop and stop if found a match or no existing match
+		while(temp->next != NULL && strcmp(temp->next->studnum, reqnum) != 0){
+			temp = temp->next;
+		}
+
+		if (temp->next != NULL){
+			delptr = temp->next;	// assign the delptr to the matched node
+			temp->next = delptr->next;	// skip over the node to be deleted
+			free(delptr);
+		} else {
+			printf("No matched student number\n");	
 			return;
 		}
-		// Move the trailing pointer and the temp
-		trail = temp;
-		temp = temp->next;
 	}
-	// If the linked list is exhausted
-	printf("No matched student number.\n");
+	(*entries) -= 1;	// updates no. of entries
+	printf("Record Deleted\n");
 	return;
 }

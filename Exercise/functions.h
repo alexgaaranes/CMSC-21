@@ -6,6 +6,7 @@ void menu(int *opt);
 char *strLower(char *str);
 int validStudnum(char *id);
 int availStudnum(Nodeptr temp, char *id);
+void dealloc(Nodeptr *hptr);
 
 // Required functions
 void addStud(Nodeptr *hptr, int *entriesPtr);
