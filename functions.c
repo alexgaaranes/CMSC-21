@@ -213,10 +213,23 @@ void addStud(Nodeptr *hptr, int *entriesPtr){
 		strcpy(tempLastName, temp->name.lastname);
 		
 		// Check on the first entry
-		if(strcmp(strLower(newLastName),strLower(tempLastName)) <= 0){
+		if(strcmp(strLower(newLastName),strLower(tempLastName)) < 0){
 			new->next = *hptr;
 			*hptr = new;
-		} else {
+		}else if(strcmp(strLower(newLastName),strLower(tempLastName))==0){
+			// If same last name, compare firstnames
+			char newFirstName[20], tempFirstName[20];
+
+			strcpy(newFirstName, new->name.firstname);
+			strcpy(tempFirstName, temp->name.firstname);
+
+			if (strcmp(strLower(newFirstName),strlower(tempFirstName))<=0){
+				new->next = *hptr;
+				*hptr = new;
+			} else {
+				// do something
+			}
+		} else { // Check the rest
 			if(temp->next == NULL){	// If one element only
 				temp->next = new;
 			} else {
