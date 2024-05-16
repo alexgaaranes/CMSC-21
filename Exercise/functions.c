@@ -184,13 +184,13 @@ void addStud(Nodeptr *hptr, int *entriesPtr){
 	printf("Enter student number: ");	
 	scanf("%s", new->studnum);
 	// Check student number if available and valid
-	if (!validStudnum(new->studnum) || !availStudnum(*hptr, new->studnum)){return;}
+	if (!validStudnum(new->studnum) || !availStudnum(*hptr, new->studnum)){free(new);return;}
 
 	printf("Enter number of absences: ");
 	scanf("%i", &new->absences);
 
 	// Check number of absences
-	if (new->absences < 0){printf("Invalid Number of Absences\n"); return;}
+	if (new->absences < 0){printf("Invalid Number of Absences\n"); free(new); return;}
 
 	// Initialize to NULL
 	new->next = NULL;
@@ -213,10 +213,10 @@ void addStud(Nodeptr *hptr, int *entriesPtr){
 		strcpy(tempLastName, temp->name.lastname);
 		
 		// Check on the first entry
-		if(strcmp(strLower(newLastName),strLower(tempLastName)) <= 0){
+		if(strcmp(strLower(newLastName),strLower(tempLastName)) < 0){
 			new->next = *hptr;
 			*hptr = new;
-		} else {
+		} else { // Check the rest
 			if(temp->next == NULL){	// If one element only
 				temp->next = new;
 			} else {
